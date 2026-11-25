@@ -1,0 +1,5 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+test_mail.eml
+scan_input.txt
