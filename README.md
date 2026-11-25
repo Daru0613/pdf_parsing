@@ -10,6 +10,35 @@ Python 3.10 이상에서:
 python -m pip install -r requirements.txt
 ```
 
+## PDF만 일괄 처리 (Gmail 연결 없음)
+
+PDF 파일을 `pdfs` 폴더에 모아두고 다음 명령을 실행합니다. 여러 PDF는 최대 4개 프로세스에서 병렬로 파싱합니다.
+
+```powershell
+New-Item -ItemType Directory -Force .\pdfs
+python pdf_batch.py
+```
+
+다른 폴더 또는 특정 파일을 지정할 수도 있습니다.
+
+```powershell
+python pdf_batch.py --input-dir "C:\PDF 파일" --output-dir .\results --workers 4
+python pdf_batch.py .\first.pdf .\second.pdf --output-dir .\results
+```
+
+처음 처리하는 PDF는 `results\PDF파일명_YYYY-MM-DD_HH-MM-SS\` 폴더에 `output.txt`와 `output.json`으로 저장됩니다. `results\index.sqlite3`에 파일 내용의 SHA-256 해시를 기록합니다. 다시 실행하면 이미 성공한 PDF는 `duplicate`로 표시하고 건너뜁니다. 파일명을 바꾼 복사본도 같은 내용이면 건너뜁니다. 오류가 난 PDF는 다음 실행에서 다시 시도합니다. 같은 초에 서로 다른 파일명이 겹치면 폴더 뒤에 번호를 붙입니다. JSON에는 `filename`, `status`, `text`, `sha256`이 들어가며 실패 시 `error`도 들어갑니다. 한 파일이 실패해도 다른 파일의 결과는 저장됩니다. 실패가 있으면 명령은 종료 코드 1을 반환합니다.
+
+웹사이트의 업로드 처리 코드에서는 디스크에 저장하기 전에도 바이트를 직접 파싱할 수 있습니다.
+
+```python
+from pdf_batch import parse_pdf_bytes, parse_pdf_files
+
+result = parse_pdf_bytes(uploaded_pdf_bytes, "uploaded.pdf")  # JSON으로 직렬화 가능한 dict
+results = parse_pdf_files(["first.pdf", "second.pdf"], output_dir="results", max_workers=4)
+```
+
+`parse_pdf_files`는 입력 순서대로 결과를 반환합니다. 파일별 결과에는 `source_path`와 `result_dir`도 포함됩니다. 여러 사용자 요청이 동시에 같은 PDF를 제출해도 해시 예약을 통해 중복 파싱을 피합니다.
+
 ## 로컬 시험
 
 1. `sample_body.txt`를 수정합니다.
